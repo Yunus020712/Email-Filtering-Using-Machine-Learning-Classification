@@ -1,0 +1,17 @@
+accuracy=95.17
+trained_on=2025-11-17 22:25:31
+total_samples=54617
+classes=spam,not_spam
+precision_spam=98.26
+recall_spam=91.32
+f1_spam=94.66
+precision_not_spam=92.78
+recall_not_spam=98.57
+f1_not_spam=95.58
+macro_precision=95.52
+macro_recall=94.94
+macro_f1=95.12
+weighted_precision=95.35
+weighted_recall=95.17
+weighted_f1=95.15
+metrics_json={"spam": {"precision": 0.9825776658270361, "recall": 0.9131876706984003, "f1-score": 0.9466127401415572, "support": 5126.0}, "not_spam": {"precision": 0.9277597402597403, "recall": 0.9856847188685753, "f1-score": 0.955845459106874, "support": 5798.0}, "accuracy": 0.9516660563896009, "macro avg": {"precision": 0.9551687030433882, "recall": 0.9494361947834878, "f1-score": 0.9512290996242156, "support": 10924.0}, "weighted avg": {"precision": 0.9534826152558917, "recall": 0.9516660563896009, "f1-score": 0.9515130792628412, "support": 10924.0}}
