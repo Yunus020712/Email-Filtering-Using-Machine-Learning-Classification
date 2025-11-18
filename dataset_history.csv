@@ -1,0 +1,46 @@
+filename,rows,columns,detected_format,timestamp
+SA_SubTxt_fn.csv,6046,3,Unknown,2025-10-15 17:25:01
+emails.csv,5172,3002,Generic message dataset (message/category),2025-10-15 17:25:12
+spam_ham_dataset.csv,5171,4,Unknown,2025-10-15 17:25:42
+spam_assassin.csv,5796,2,Unknown,2025-10-15 17:26:07
+spam_assassin.csv,5796,2,Unknown,2025-10-15 19:34:17
+SA_SubTxt_fn.csv,6046,3,Unknown,2025-10-15 19:34:33
+SA_SubTxt_fn.csv,6046,3,Unknown,2025-10-15 19:34:51
+SA_SubTxt_fn.csv,6046,3,Unknown,2025-10-15 19:40:54
+SA_SubTxt_fn.csv,6046,3,Unknown,2025-10-15 19:49:36
+emails.csv,5172,3002,Generic message dataset (message/category),2025-10-15 19:49:54
+emails.csv,5172,3002,Generic message dataset (message/category),2025-10-15 20:20:42
+spam_assassin.csv,5796,2,Unknown,2025-10-15 20:39:34
+spam_assassin.csv,5796,2,Unknown,2025-10-15 20:40:24
+spam_assassin.csv,5796,2,Unknown,2025-10-15 20:41:37
+spam_ham_dataset.csv,5171,4,Unknown,2025-10-15 20:43:38
+spam_ham_dataset.csv,5171,4,Unknown,2025-10-20 17:34:08
+CEAS_08.csv,39154,7,Body-based dataset (body/label),2025-10-20 18:35:10
+CEAS_08.csv,39154,7,Body-based dataset (body/label),2025-10-20 19:19:28
+SA_SubTxt_fn.csv,6046,3,Unknown,2025-10-20 19:22:11
+emails.csv,5172,3002,Generic message dataset (message/category),2025-10-20 19:22:30
+spam_assassin.csv,5796,2,Unknown,2025-10-20 19:23:11
+spam_ham_dataset.csv,5171,4,Unknown,2025-10-20 19:23:28
+CEAS_08.csv,39154,2,Body-based dataset (body/label),2025-10-21 16:33:13
+spam_ham_dataset.csv,4993,2,Unknown,2025-10-21 18:03:14
+spam_ham_dataset.csv,4993,2,Unknown,2025-10-21 19:52:37
+spam.csv,5157,2,Generic message dataset (message/category),2025-10-26 00:58:43
+spam.csv,5161,2,Generic message dataset (message/category),2025-10-28 16:58:31
+spam.csv,5161,2,Generic message dataset (message/category),2025-10-28 16:59:12
+spam.csv,5165,2,Generic message dataset (message/category),2025-10-28 17:00:34
+spam_hamdata.csv,4994,2,Unknown,2025-10-28 17:10:20
+spam_hamdata.csv,4994,2,Unknown,2025-10-28 17:13:44
+spam.csv,5169,2,Generic message dataset (message/category),2025-10-28 17:25:13
+spamham.csv,5169,2,Generic message dataset (message/category),2025-10-28 17:26:59
+spamham.csv,5169,2,Generic message dataset (message/category),2025-10-28 17:30:47
+spamham.csv,5184,2,Generic message dataset (message/category),2025-10-28 17:32:33
+spamset.csv,5193,2,Generic message dataset (message/category),2025-10-29 11:49:34
+spam_hamdata.csv,4998,2,Unknown,2025-11-10 12:01:10
+spamhammails.csv,5242,2,Generic message dataset (message/category),2025-11-10 12:04:39
+spam_hamdata.csv,4998,2,Unknown,2025-11-12 19:57:21
+spamset.csv,5203,2,Generic message dataset (message/category),2025-11-12 19:58:03
+spamset.csv,5221,2,Generic message dataset (message/category),2025-11-13 05:54:53
+spamset.csv,5232,2,Generic message dataset (message/category),2025-11-13 09:14:00
+spamset2.csv,5203,2,Generic message dataset (message/category),2025-11-13 10:25:18
+spamset4.csv,5241,2,Generic message dataset (message/category),2025-11-13 11:03:55
+spamset5.csv,5254,2,Generic message dataset (message/category),2025-11-17 22:24:56
