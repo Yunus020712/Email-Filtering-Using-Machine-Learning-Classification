@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+  <style>
+    /* Top actions */
+    .actions{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px}
+    .btn{background:#2c8d6b;color:#fff;border-radius:8px;padding:10px 14px;text-decoration:none;font-weight:600}
+    .btn.secondary{background:#1363df}
+    .btn.ghost{background:#eef2ff;color:#1e3a8a}
+
+    /* ====== 2-column layout ====== */
+    .grid{
+      display:grid;
+      grid-template-columns:380px 1fr;
+      gap:20px;
+      align-items:start;
+    }
+    @media (max-width:1100px){ .grid{grid-template-columns:1fr;} }
+
+    .card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);padding:18px}
+    .muted{color:#6b7280;font-size:12px}
+
+    /* Emails Processed */
+    .ep-stats{display:flex;gap:12px;align-items:stretch}
+    .ep-box{flex:1;background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px;text-align:center}
+    .ep-big{font-size:36px;font-weight:800}
+
+    /* Model Performance (admins only) */
+    .mp-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:14px;
+      margin-top:8px;
+    }
+    .mp-box{
+      background:#f6f8fb;
+      border:1px solid #e5e7eb;
+      border-radius:12px;
+      padding:16px;
+    }
+    .mp-title{font-weight:700;margin-bottom:6px}
+    .mp-value{font-weight:800;font-size:22px}
+
+    /* Donut */
+    .chart-card{
+      height:auto;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+    }
+    .chart-wrap{
+      position:relative;
+      height:350px;
+      width:350px;
+      margin:auto;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .chart-wrap canvas{
+      width:85% !important;
+      height:85% !important;
+      display:block;
+    }
+
+    /* Pills under donut */
+    .pills{display:flex;justify-content:center;gap:18px;margin-top:20px;flex-wrap:wrap}
+    .pill{background:#f6f8fb;border:1px solid #d9e2ec;border-radius:12px;padding:12px 18px;min-width:150px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.05)}
+    .pill .big{font-weight:800;font-size:22px}
+    .pill .small{margin-top:4px;font-size:12px;color:#667085}
+
+    .legend{display:flex;gap:16px;justify-content:center;margin-top:10px;color:#6b7280;font-size:12px}
+    .legend span::before{content:" ";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:baseline}
+    .legend .spam::before{background:#e74c3c}
+    .legend .ham::before{background:#2d77ff}
+  </style>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+
+  <!-- Pass initial chart data -->
+  <script id="chart-init" type="application/json">
+    {{ {
+      "labels": chart_labels if chart_labels is defined else ["Spam","Non-Spam"],
+      "values": chart_values if chart_values is defined else [0,0]
+    } | tojson | safe }}
+  </script>
+</head>
+<body>
+  {% include 'sidebar.html' %}
+
+  <main class="main">
+    <h1>Welcome, {{ username }}!</h1>
+    <p class="muted">Glad to see you back on your email filtering dashboard</p>
+
+    <!-- Actions -->
+    <div class="actions">
+      <a class="btn" href="{{ url_for('refresh_emails') }}">🟢 Fetch Latest Gmail</a>
+      <a class="btn secondary" href="{{ url_for('emails_history') }}">🔎 View Filtered Emails</a>
+      <a class="btn ghost" href="{{ url_for('refresh_all') }}?scope=ALL&cap=5000&batch=100">⚡ Classify Entire Mailbox</a>
+      <span class="muted" style="align-self:center">Inbox only · Spam only</span>
+    </div>
+
+    <!-- ===== 2-column layout ===== -->
+    <div class="grid">
+      <!-- LEFT: Emails + Performance -->
+      <div class="stack">
+        <div class="card">
+          <h3>Emails Processed</h3>
+
+          <div class="ep-stats" style="margin-top:10px">
+            <div class="ep-box">
+              <div class="muted">TODAY</div>
+              <div class="ep-big">{{ emails_filtered_today }}</div>
+            </div>
+            <div class="ep-box">
+              <div class="muted">All-time (filtered by system)</div>
+              <div class="ep-big">{{ emails_filtered_total }}</div>
+            </div>
+          </div>
+
+          <div class="ep-stats" style="margin-top:10px">
+            <div class="ep-box">
+              <div class="muted">Gmail total (Emails)</div>
+              <div class="ep-big">{{ emails_gmail_total }}</div>
+            </div>
+            <div class="ep-box">
+              <div class="muted">Inbox / Spam</div>
+              <div class="ep-big" style="font-size:22px">{{ emails_gmail_inbox }} / {{ emails_gmail_spam }}</div>
+            </div>
+          </div>
+
+          <div class="muted" style="margin-top:8px">
+            • For your account • Local time
+          </div>
+        </div>
+
+        {% if is_admin %}
+        <!-- ADMIN ONLY: Model Performance (replaces System Performance) -->
+        <div class="card" style="margin-top:20px">
+          <h3>Model Performance</h3>
+          <div class="mp-grid">
+            <div class="mp-box">
+              <div class="mp-title">Accuracy</div>
+              <div class="mp-value">{{ accuracy | default('N/A') }}%</div>
+            </div>
+            <div class="mp-box">
+              <div class="mp-title">Precision</div>
+              <div class="mp-value">{{ precision | default('N/A') }}%</div>
+            </div>
+            <div class="mp-box">
+              <div class="mp-title">Recall</div>
+              <div class="mp-value">{{ recall | default('N/A') }}%</div>
+            </div>
+            <div class="mp-box">
+              <div class="mp-title">F1 Score</div>
+              <div class="mp-value">{{ f1 | default('N/A') }}%</div>
+            </div>
+          </div>
+          <p class="muted" style="margin-top:10px">
+            Last trained: {{ trained_on or 'N/A' }}
+          </p>
+        </div>
+        {% else %}
+        <!-- USERS: keep System Performance -->
+        <div class="card" style="margin-top:20px">
+          <h3>System Performance</h3>
+          <div class="sys-list" style="margin-top:8px">
+            <p><strong>Uptime:</strong> {{ uptime }}</p>
+            <p><strong>Avg Response:</strong> {{ avg_response }}</p>
+            <p><strong>Memory Usage:</strong> {{ memory_usage }}</p>
+            <p><strong>CPU:</strong> {{ cpu_usage }}</p>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- RIGHT: Donut Chart -->
+      <div class="card chart-card">
+        <h3 style="text-align:center;margin-bottom:6px">Spam vs Non-Spam</h3>
+
+        <div class="chart-wrap">
+          <canvas id="donut"></canvas>
+        </div>
+
+        <!-- Pills BELOW donut -->
+        <div class="pills">
+          <div class="pill">
+            <div class="big" style="color:#e74c3c">{{ spam_pct }}%</div>
+            <div class="small"><strong>{{ (chart_values[0] if chart_values is defined else 0) | int }}</strong> emails</div>
+            <div class="muted">Spam</div>
+          </div>
+          <div class="pill">
+            <div class="big" style="color:#2d77ff">{{ nonspam_pct }}%</div>
+            <div class="small"><strong>{{ (chart_values[1] if chart_values is defined else 0) | int }}</strong> emails</div>
+            <div class="muted">Non-Spam</div>
+          </div>
+        </div>
+
+        <div class="legend">
+          <span class="spam">Spam</span>
+          <span class="ham">Non-Spam</span>
+        </div>
+        <p class="muted" style="text-align:center;margin-top:4px">
+          Spam and non-spam% (all-time, current scope)
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const init = JSON.parse(
+        document.getElementById('chart-init').textContent || '{"labels":["Spam","Non-Spam"],"values":[0,0]}'
+      );
+      const ctx = document.getElementById('donut').getContext('2d');
+
+      new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: init.labels,
+          datasets: [{
+            data: init.values,
+            backgroundColor: ['#e74c3c', '#2d77ff'],
+            borderWidth: 0,
+            hoverOffset: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '65%',
+          plugins: {
+            legend: { display: false },
+            title: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const val = ctx.parsed;
+                  const t = (init.values[0] + init.values[1]) || 1;
+                  const pct = Math.round((val * 100) / t);
+                  return `${ctx.label}: ${val} (${pct}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>

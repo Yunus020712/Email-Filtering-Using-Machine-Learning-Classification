@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login | Telstra Email Filtering System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    /* --- Gradient Background --- */
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      /* Telstra gradient: dark blue to light cyan */
+      background: linear-gradient(135deg, #004C97 0%, #00B2ED 100%);
+    }
+
+    /* --- Keep existing login box styling --- */
+    .login-container {
+      background: rgba(0, 0, 0, 0.45);
+      color: white;
+      text-align: center;
+      padding: 40px 60px;
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+      max-width: 480px;
+    }
+
+    .telstra-logo {
+      width: 200px;
+      height: auto;
+      display: block;
+      margin: 0 auto 30px auto;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 15px;
+    }
+
+    p {
+      font-size: 15px;
+      margin-bottom: 25px;
+      opacity: 0.9;
+    }
+
+    .google-btn {
+      background: #4285F4;
+      color: #fff;
+      border: none;
+      padding: 12px 30px;
+      font-size: 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+
+    .google-btn:hover {
+      background: #357ae8;
+      transform: scale(1.03);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="login-container">
+    <img src="{{ url_for('static', filename='telstra_logo.png') }}" alt="Telstra Logo" class="telstra-logo">
+    <h1>Welcome to Telstra Email Filtering System</h1>
+    <p>Please log in with Google</p>
+    <a href="{{ url_for('login') }}" class="google-btn">Login with Google</a>
+  </div>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Users</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body>
+  {% include 'sidebar.html' %}
+
+  <main class="main">
+    <header>
+      <h1>Manage Users</h1>
+      <p>Role-based access control and user management</p>
+    </header>
+
+    <!-- Add User Form -->
+    <section class="card">
+      <h3>Add New User</h3>
+      <form method="POST" action="{{ url_for('manage_users') }}" class="form-inline">
+        <input type="email" name="email" placeholder="Enter email" required>
+        <select name="role">
+          <option value="user">User</option>
+          <option value="admin">Admin</option>
+        </select>
+        <button type="submit">➕ Add User</button>
+      </form>
+    </section>
+
+    <!-- User List -->
+    <section class="card">
+      <h3>Current Users</h3>
+      <table class="styled-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+          <tr>
+            <td>{{ user[0] }}</td>
+            <td>{{ user[1] }}</td>
+            <td>{{ user[2] }}</td>
+            <td>
+              <form method="POST" action="{{ url_for('delete_user', user_id=user[0]) }}" style="display:inline;">
+                <button type="submit" class="btn-danger">🗑 Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>

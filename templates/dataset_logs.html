@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dataset Upload History</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+  <style>
+    .table-container {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      margin-top: 20px;
+    }
+    h1 { margin-bottom: 6px; }
+    .subtext { color:#6b7280; margin-bottom: 16px; }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 15px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background: #2c8d6b; color: #fff; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    tr:hover { background: #eefaf4; }
+
+    .btn-back {
+      background: #007bff; color: white; border: none; padding: 8px 14px;
+      border-radius: 6px; text-decoration: none; font-weight: bold;
+    }
+    .btn-back:hover { background: #0056b3; }
+
+    /* Pagination */
+    .pager {
+      display:flex; gap:8px; align-items:center; justify-content:space-between;
+      margin-top: 16px;
+    }
+    .pager .left, .pager .right { display:flex; gap:8px; align-items:center; }
+    .pager .btn, .pager .btn.disabled {
+      padding:8px 12px; border:1px solid #d1d5db; border-radius:8px;
+      background:#fff; color:#111827; text-decoration:none; font-weight:500;
+    }
+    .pager .btn:hover { background:#f3f4f6; }
+    .pager .btn.disabled { pointer-events:none; opacity:0.5; }
+    .pager .info { color:#6b7280; }
+  </style>
+</head>
+<body>
+  {% include 'sidebar.html' %}
+
+  <main class="main">
+    <h1>📦 Dataset Upload History</h1>
+    <div class="subtext">
+      Newest uploads appear first. Showing {{ logs|length }} of {{ total }} records.
+    </div>
+
+    <div class="table-container">
+      {% if logs and logs|length > 0 %}
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Filename</th>
+              <th>Rows</th>
+              <th>Columns</th>
+              <th>Detected Format</th>
+              <th>Uploaded At</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% set start_index = ((page|default(1) - 1) * (per_page|default(10))) %}
+            {% for log in logs %}
+              <tr>
+                <td>{{ start_index + loop.index }}</td>
+                <td>{{ log.filename }}</td>
+                <td>{{ log.rows }}</td>
+                <td>{{ log.columns }}</td>
+                <td>{{ log.detected_format }}</td>
+                <td>{{ log.timestamp }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div class="pager">
+          <div class="left">
+            <a class="btn {% if page <= 1 %}disabled{% endif %}" href="{{ url_for('dataset_logs', page=1) }}">« First</a>
+            <a class="btn {% if page <= 1 %}disabled{% endif %}" href="{{ url_for('dataset_logs', page=page-1) }}">‹ Prev</a>
+          </div>
+          <div class="info">
+            Page {{ page }} of {{ pages }} &nbsp;•&nbsp;
+            Showing {{ start_index + 1 if total>0 else 0 }}–{{ start_index + logs|length }} of {{ total }}
+          </div>
+          <div class="right">
+            <a class="btn {% if page >= pages %}disabled{% endif %}" href="{{ url_for('dataset_logs', page=page+1) }}">Next ›</a>
+            <a class="btn {% if page >= pages %}disabled{% endif %}" href="{{ url_for('dataset_logs', page=pages) }}">Last »</a>
+          </div>
+        </div>
+      {% else %}
+        <p>No dataset uploads have been logged yet.</p>
+      {% endif %}
+    </div>
+
+    <br />
+    <a href="{{ url_for('update_model') }}" class="btn-back">← Back to Update Model</a>
+  </main>
+</body>
+</html>

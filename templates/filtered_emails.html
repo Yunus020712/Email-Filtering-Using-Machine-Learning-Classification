@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Filtered Emails</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+  <style>
+    /* --- Badge Styling --- */
+    .badge.blue { background:#007bff; color:#fff; padding:4px 10px; border-radius:6px; }
+    .badge.red  { background:#dc3545; color:#fff; padding:4px 10px; border-radius:6px; }
+
+    /* --- Controls Row --- */
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 220px;
+      gap: 12px;
+      align-items: center;
+    }
+    .search-box {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .select-box {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      background:#fff;
+    }
+
+    mark { background-color:#ffeb3b; color:#000; font-weight:600; border-radius:3px; padding:0 2px; }
+
+    /* --- Buttons --- */
+    .btn-primary { background:#2c8d6b; color:#fff; padding:8px 16px; border:none; border-radius:6px; cursor:pointer; text-decoration:none; font-weight:500; margin:0 5px; transition:.2s; }
+    .btn-primary:hover { background:#23775a; }
+
+    /* --- Pagination --- */
+    .pagination { text-align:center; margin-top:25px; }
+    .page-info { text-align:center; color:#333; font-weight:500; margin-top:15px; }
+
+    /* --- Table --- */
+    table.table { width:100%; border-collapse:collapse; margin-top:20px; }
+    table.table th, table.table td { text-align:left; padding:10px; border-bottom:1px solid #ddd; }
+    table.table th { background:#f8f9fa; color:#333; }
+    table.table tr:hover { background:#f3f3f3; }
+    .no-emails { text-align:center; color:#777; padding:20px; }
+  </style>
+</head>
+<body>
+  {% include 'sidebar.html' %}
+
+  <main class="main">
+    <h1>Filtered Emails</h1>
+    <p>Showing 10 emails per page. Use the search box or classification filter to refine results.</p>
+
+    <!-- 🔍 Search + Filter -->
+    <form method="get" action="{{ url_for('emails_history') }}">
+      <div class="card">
+        <div class="controls">
+          <input
+            type="text"
+            name="q"
+            id="searchInput"
+            class="search-box"
+            placeholder="🔍 Search by sender or subject..."
+            value="{{ q or '' }}"
+          >
+          <select name="cls" id="classFilter" class="select-box" onchange="this.form.submit()">
+            <option value="all" {% if selected_cls == 'all' %}selected{% endif %}>All classifications</option>
+            <option value="spam" {% if selected_cls == 'spam' %}selected{% endif %}>
+              Spam{% if counts.spam %} ({{ counts.spam }}){% endif %}
+            </option>
+            <option value="not_spam" {% if selected_cls == 'not_spam' %}selected{% endif %}>
+              Non-Spam{% if counts.not_spam %} ({{ counts.not_spam }}){% endif %}
+            </option>
+          </select>
+        </div>
+      </div>
+    </form>
+
+    <!-- 📧 Email Table -->
+    <table class="table" id="emailTable">
+      <thead>
+        <tr>
+          <th>Sender</th>
+          <th>Subject</th>
+          <th>Snippet</th>
+          <th>Classification</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if emails %}
+          {% for email in emails %}
+          {% set raw = (email.classification or '')|lower %}
+          {# Normalize: treat phishing as spam; ham/non-spam as not_spam #}
+          {% set cls = 'spam' if raw in ['spam','phishing'] else 'not_spam' %}
+          <tr data-cls="{{ cls }}">
+            <td>{{ email.from }}</td>
+            <td>{{ email.subject }}</td>
+            <td>{{ email.snippet }}</td>
+            <td>
+              {% if cls == 'spam' %}
+                <span class="badge red">Spam</span>
+              {% else %}
+                <span class="badge blue">Non-Spam</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="4" class="no-emails">No emails found.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+
+    <!-- 🧭 Page Info + Pagination -->
+    {% if total_pages and current_page %}
+      <div class="page-info">Page {{ current_page }} of {{ total_pages }}</div>
+
+      <div class="pagination">
+        {% if current_page > 1 %}
+          <a class="btn-primary" href="{{ url_for('emails_history', cls=selected_cls, q=q, page=current_page-1) }}">⬅ Previous</a>
+        {% endif %}
+        {% if current_page < total_pages %}
+          <a class="btn-primary" href="{{ url_for('emails_history', cls=selected_cls, q=q, page=current_page+1) }}">Next ➡</a>
+        {% endif %}
+      </div>
+
+      <!-- 🔢 Jump to Page -->
+      <div style="text-align:center; margin-top:15px;">
+        <label for="pageSelect"><strong>Go to Page:</strong></label>
+        <select id="pageSelect" style="padding:6px 10px; border-radius:6px; border:1px solid #ccc;">
+          {% for i in range(1, total_pages + 1) %}
+            <option value="{{ i }}" {% if i == current_page %}selected{% endif %}>{{ i }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    {% endif %}
+  </main>
+
+  <script>
+    // ⌨️ Auto-search while typing
+    const searchInput = document.getElementById('searchInput');
+    let typingTimer;
+    const delay = 400; // ms
+
+    searchInput.addEventListener('input', function () {
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(() => {
+        this.form.submit();
+      }, delay);
+    });
+
+    // ✅ Jump to page dropdown
+    const pageSelect = document.getElementById('pageSelect');
+    if (pageSelect) {
+      pageSelect.addEventListener('change', function () {
+        const selectedPage = this.value;
+        const cls = document.getElementById('classFilter').value;
+        const q = encodeURIComponent(document.getElementById('searchInput').value.trim());
+        window.location.href = `/emails?page=${selectedPage}&cls=${cls}&q=${q}`;
+      });
+    }
+
+    // ✅ Highlight search terms client-side (after server filter)
+    const q = searchInput.value.trim().toLowerCase();
+    if (q) {
+      const rows = document.querySelectorAll('#emailTable tbody tr');
+      rows.forEach(row => {
+        const senderCell = row.cells[0];
+        const subjectCell = row.cells[1];
+        const highlight = (cell) => {
+          const text = cell.textContent;
+          const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+          cell.innerHTML = text.replace(re, '<mark>$1</mark>');
+        };
+        highlight(senderCell);
+        highlight(subjectCell);
+      });
+    }
+  </script>
+</body>
+</html>

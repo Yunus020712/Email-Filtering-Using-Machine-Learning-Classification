@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Reports</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+  <style>
+    .button{background:#2c8d6b;color:#fff;padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:500;transition:.3s}
+    .button:hover{background:#23775a}
+    h1{font-size:26px;margin-bottom:6px}
+    header{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-bottom:20px}
+    .card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+    .muted{color:#6b7280;font-size:12px;margin-top:6px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .row input,.row select{padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px}
+    .spacer{flex:1}
+
+    /* ====== Main split (LEFT: KPI grid, RIGHT: donut) ====== */
+    .split{
+      display:grid;
+      grid-template-columns: 1.1fr 1fr;   /* KPI area slightly wider */
+      gap:24px;
+      align-items:start;
+    }
+    @media (max-width: 1100px){
+      .split{ grid-template-columns: 1fr; }
+    }
+
+    /* LEFT: KPI grid (2x2) */
+    .kpi-2x2{
+      display:grid;
+      grid-template-columns: repeat(2, minmax(220px,1fr));
+      gap:18px;
+    }
+    .kpi-2x2 .card{padding:18px}
+    .kpi-grid{display:grid;grid-template-columns:repeat(2,minmax(120px,1fr));gap:10px}
+    .kpi-grid div{background:#f8fafc;padding:10px;border-radius:8px}
+
+    /* RIGHT: donut + pills */
+    .chart-col{ display:flex; flex-direction:column; align-items:center; }
+    .chart-heading{ font-weight:600; text-align:center; margin-bottom:8px; }
+    .chart-box{ width:340px; max-width:90vw; height:340px; position:relative; }
+    .chart-box canvas{width:100% !important;height:100% !important;display:block}
+    .chart-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#6b7280;font-size:14px}
+    .stat-pills{ display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin-top:12px; }
+    .pill{
+      background:#f6f8fb; border:1px solid #d9e2ec; box-shadow:0 2px 6px rgba(0,0,0,.05);
+      border-radius:12px; padding:14px 18px; min-width:140px;
+    }
+    .pill .big{font-weight:700;font-size:22px;line-height:1.1}
+    .pill .lbl{font-size:13px;color:#6b7280}
+    .pill .cnt{font-size:12px;color:#9ca3af}
+  </style>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+
+  <!-- JSON handoff: initial donut values -->
+  <script id="chart-init" type="application/json">
+    {{ {
+        "labels": (chart_labels if chart_labels is defined else ["Spam","Non-Spam"]),
+        "values": (chart_values if chart_values is defined else [
+          summary.spam_detected if summary is defined else 0,
+          summary.non_spam      if summary is defined else 0
+        ])
+      } | tojson | safe }}
+  </script>
+</head>
+<body>
+  {% include 'sidebar.html' %}
+
+  <main class="main">
+    <header>
+      <div class="row" style="width:100%">
+        <div>
+          <h1>Reports</h1>
+          <p class="muted">Email filtering analytics and performance metrics</p>
+        </div>
+        <div class="spacer"></div>
+
+        {% if start_date is defined and end_date is defined %}
+          <form class="row" method="get" action="{{ url_for('reports') }}">
+            <label for="start" class="muted">From</label>
+            <input type="date" id="start" name="start" value="{{ start_date }}">
+            <label for="end" class="muted">To</label>
+            <input type="date" id="end" name="end" value="{{ end_date }}">
+            {% if users is defined %}
+              <label for="user" class="muted">User</label>
+              <select id="user" name="user">
+                {% set _sel = (selected_user if selected_user is defined else 'ALL') %}
+                <option value="ALL" {{ 'selected' if _sel == 'ALL' else '' }}>ALL (Global)</option>
+                {% for u in users %}
+                  <option value="{{ u }}" {{ 'selected' if _sel == u else '' }}>{{ u }}</option>
+                {% endfor %}
+              </select>
+            {% endif %}
+            <button class="button" type="submit">Apply</button>
+            <a class="button" href="{{ url_for('reports') }}" style="background:#6b7280">Reset</a>
+          </form>
+        {% endif %}
+      </div>
+
+      <a href="{{ url_for('download_csv') }}" class="button">⬇️ Download CSV</a>
+    </header>
+
+    <!-- ======= Top section: LEFT KPIs (2x2), RIGHT Donut ======= -->
+    <section class="card">
+      <div class="split">
+        <!-- LEFT: KPI 2x2 -->
+        <div class="kpi-2x2">
+          <div class="card">
+            <h3>Model Performance</h3>
+            <div class="kpi-grid">
+              <div><strong>Accuracy</strong><br>{{ summary.accuracy }}%</div>
+              <div><strong>Precision</strong><br>{{ summary.precision }}%</div>
+              <div><strong>Recall</strong><br>{{ summary.recall }}%</div>
+              <div><strong>F1 Score</strong><br>{{ summary.f1 }}%</div>
+            </div>
+            <div class="muted" style="margin-top:8px">Last trained: {{ summary.trained_on }}</div>
+          </div>
+
+          <div class="card">
+            <h3>Weekly Summary</h3>
+            <p>
+              Emails Processed: {{ summary.emails_processed }}<br>
+              Spam Detected: {{ summary.spam_detected }}<br>
+              Non-Spam: {{ summary.non_spam }}<br>
+              False Positives: {{ summary.false_positives }}<br>
+              False Negatives: {{ summary.false_negatives }}
+            </p>
+          </div>
+
+          <div class="card">
+            <h3>System Performance</h3>
+            <p>
+              Uptime: {{ summary.uptime }}<br>
+              Avg Response: {{ summary.avg_response }}<br>
+              Memory Usage: {{ summary.memory_usage }}<br>
+              CPU: {{ summary.cpu_usage }}
+            </p>
+          </div>
+
+          <div class="card">
+            <h3>User Activity</h3>
+            <p>
+              Active Users: {{ summary.active_users }}<br>
+              Emails Flagged: {{ summary.emails_flagged }}<br>
+              Admin Actions: {{ summary.admin_actions }}<br>
+              Training Sessions: {{ summary.training_sessions }}
+            </p>
+          </div>
+        </div>
+
+        <!-- RIGHT: donut + pills -->
+        <div class="chart-col">
+          <div class="chart-heading">Spam vs Non-Spam</div>
+          <div class="chart-box">
+            <canvas id="spamChart" aria-label="Spam vs Non-Spam"></canvas>
+            <div id="emptyNote" class="chart-empty" style="display:none">No data in this window</div>
+          </div>
+
+          <div class="stat-pills">
+            <div class="pill">
+              <div class="big" style="color:#e74c3c">{{ (spam_pct_sel if spam_pct_sel is defined else spam_pct or 0) }}%</div>
+              <div class="lbl">Spam</div>
+              <div class="cnt">Count: {{ (spam_count if spam_count is defined else total_spam or 0) }}</div>
+            </div>
+            <div class="pill">
+              <div class="big" style="color:#2d77ff">{{ (ham_pct_sel if ham_pct_sel is defined else ham_pct or 0) }}%</div>
+              <div class="lbl">Non-Spam</div>
+              <div class="cnt">Count: {{ (ham_count if ham_count is defined else total_ham or 0) }}</div>
+            </div>
+          </div>
+
+          <div class="muted" style="margin-top:8px">
+            Window: {{ start_date }} — {{ end_date }} • Scope: {{ selected_user }}
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Build the donut
+    window.addEventListener('DOMContentLoaded', function () {
+      const initEl = document.getElementById('chart-init');
+      let init = {labels:['Spam','Non-Spam'], values:[0,0]};
+      try { init = JSON.parse(initEl?.textContent || '{}') || init; } catch(e) {}
+
+      const canvas = document.getElementById('spamChart');
+      const emptyNote = document.getElementById('emptyNote');
+      const total = (Number(init.values?.[0]||0) + Number(init.values?.[1]||0));
+      if (total <= 0) { emptyNote.style.display = 'flex'; return; }
+      emptyNote.style.display = 'none';
+
+      new Chart(canvas.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+          labels: init.labels,
+          datasets: [{
+            data: init.values,
+            backgroundColor: ['#e74c3c', '#2d77ff'],
+            borderWidth: 0,
+            hoverOffset: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '62%',
+          plugins: {
+            legend: { display: false },
+            title: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const val = ctx.parsed;
+                  const t = (init.values[0] + init.values[1]) || 1;
+                  const pct = Math.round((val * 100) / t);
+                  return `${ctx.label}: ${val} (${pct}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>

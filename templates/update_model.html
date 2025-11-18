@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Update Machine Learning Model</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}" />
+  <style>
+    /* Layout Containers */
+    .flex-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 25px;
+      margin-top: 25px;
+      align-items: stretch;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+      flex: 1;
+      min-width: 380px;
+    }
+
+    /* Upload Box Styling */
+    .upload-box {
+      border: 2px dashed #ccc;
+      border-radius: 10px;
+      padding: 40px 20px;
+      text-align: center;
+      background: #f9f9f9;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 16px;
+      font-weight: 500;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+    }
+
+    .upload-box:hover {
+      border-color: #2c8d6b;
+      background: #eefaf4;
+    }
+
+    .upload-box p {
+      margin-bottom: 15px;
+    }
+
+    .file-name {
+      font-size: 14px;
+      color: #2c8d6b;
+      margin-top: 10px;
+    }
+
+    /* Button */
+    .btn-train {
+      background: #2c8d6b;
+      color: white;
+      padding: 10px 25px;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .btn-train:hover {
+      background: #23775a;
+    }
+
+    /* Stats Card */
+    .stats {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .stats h3 {
+      margin-bottom: 12px;
+    }
+
+    .stats p {
+      font-size: 16px;
+      margin: 6px 0;
+    }
+
+    .stats strong {
+      color: #2c8d6b;
+    }
+
+    /* Chart Section */
+    .chart-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 25px;
+      margin-top: 35px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Overlay Spinner */
+    #overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.9);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 9999;
+    }
+
+    .spinner {
+      border: 6px solid #ddd;
+      border-top: 6px solid #2c8d6b;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .overlay-text {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #2c8d6b;
+      font-weight: 600;
+    }
+  </style>
+</head>
+
+<body>
+  {% include 'sidebar.html' %}
+
+  <main class="main">
+    <h1>Update Machine Learning Model!</h1>
+    <p>Upload a new dataset and retrain the email classification model.</p>
+
+    <!-- 🔹 Upload and Stats Section -->
+    <div class="flex-row">
+      <!-- Upload Box -->
+      <div class="card">
+        <form id="trainForm" action="{{ url_for('train_model_route') }}" method="POST" enctype="multipart/form-data">
+          <div class="upload-box" id="uploadBox">
+            <input type="file" id="dataset" name="dataset" accept=".csv,.json" style="display:none" required />
+            <p>⬆ Click here to upload dataset (CSV or JSON)</p>
+            <button type="submit" id="trainButton" class="btn-train">Train Model</button>
+            <div id="fileName" class="file-name"></div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Model Stats -->
+      <div class="card stats">
+        <h3>📊 Current Model Stats</h3>
+        <p><strong>Accuracy:</strong> {{ accuracy }}%</p>
+        <p><strong>Last Trained:</strong> {{ last_trained }}</p>
+        <p><strong>Training Data:</strong> {{ training_data }} samples</p>
+      </div>
+    </div>
+
+    <!-- 🔹 Model Accuracy Trend -->
+    <section class="chart-card">
+      <h3>📈 Model Accuracy Trend</h3>
+      <canvas id="accuracyChart" height="120"></canvas>
+    </section>
+  </main>
+
+  <!-- ✅ Training Overlay -->
+  <div id="overlay">
+    <div class="spinner"></div>
+    <div class="overlay-text">Training in Progress… Please wait</div>
+  </div>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // 🧩 Chart Loader
+    fetch("/model_history")
+      .then(res => res.json())
+      .then(data => {
+        const ctx = document.getElementById("accuracyChart").getContext("2d");
+        new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: data.timestamps,
+            datasets: [{
+              label: "Model Accuracy (%)",
+              data: data.accuracies,
+              borderColor: "#2c8d6b",
+              backgroundColor: "rgba(44,141,107,0.1)",
+              fill: true,
+              tension: 0.3,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+            }],
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: true, position: "top" } },
+            scales: {
+              y: { beginAtZero: true, max: 100, title: { display: true, text: "Accuracy (%)" } },
+              x: { title: { display: true, text: "Training Time" } }
+            },
+          },
+        });
+      })
+      .catch(err => console.error("Chart load error:", err));
+
+    // 🧩 Spinner + Button Lock
+    const form = document.getElementById("trainForm");
+    const button = document.getElementById("trainButton");
+    const overlay = document.getElementById("overlay");
+
+    form.addEventListener("submit", () => {
+      button.disabled = true;
+      overlay.style.display = "flex";
+    });
+
+    // 🧩 File Input Logic
+    const datasetInput = document.getElementById("dataset");
+    const fileNameDisplay = document.getElementById("fileName");
+    const uploadBox = document.getElementById("uploadBox");
+
+    uploadBox.addEventListener("click", (e) => {
+      if (e.target.id !== "trainButton") {
+        datasetInput.click();
+      }
+    });
+
+    datasetInput.addEventListener("change", function() {
+      if (this.files && this.files.length > 0) {
+        fileNameDisplay.textContent = "📂 " + this.files[0].name;
+      } else {
+        fileNameDisplay.textContent = "";
+      }
+    });
+  </script>
+</body>
+</html>
